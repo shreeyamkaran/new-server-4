@@ -20,4 +20,13 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             "WHERE id = :notificationId",
             nativeQuery = true)
     int dismissNotification(Long notificationId);
+
+    @Modifying
+    @Transactional
+    @Query(value = "DELETE FROM notification " +
+            "WHERE task_id = :taskId",
+            nativeQuery = true)
+    void deleteNotificationByTaskId(Long taskId);
+
+    List<Notification> findAllByTaskId(Long taskId);
 }

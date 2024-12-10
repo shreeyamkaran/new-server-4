@@ -27,7 +27,7 @@ public class Employee {
     private String gender;
     private Date doj;
     private String location;
-    @ManyToMany
+    @ManyToMany(cascade = CascadeType.ALL)
     @JsonManagedReference
     private List<Task> tasks;
     @ManyToMany

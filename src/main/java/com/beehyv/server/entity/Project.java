@@ -20,7 +20,7 @@ public class Project {
     @OneToOne
     @JsonBackReference
     private Employee manager;
-    @OneToMany
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonBackReference
     private List<Task> tasks;
 }

@@ -130,4 +130,18 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
+    public void removeNotificationFromManager(String managerUsername, NotificationDto notificationDto) {
+        SseEmitter emitter = emitters.get(managerUsername);
+        if(emitter != null) {
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("deleteNotification")
+                        .data(notificationDto));
+            }
+            catch(IOException e) {
+                emitters.remove(managerUsername);
+            }
+        }
+    }
+
 }

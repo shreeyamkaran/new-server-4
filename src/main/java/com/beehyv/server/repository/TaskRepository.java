@@ -27,4 +27,25 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
             "WHERE tasks_id = :taskId",
             nativeQuery = true)
     Long findEmployeeIdByTaskId(Long taskId);
+
+    @Modifying
+    @Transactional
+    @Query(value = "DELETE FROM employee_tasks " +
+            "WHERE tasks_id = :taskId",
+            nativeQuery = true)
+    void deleteTaskMappingFromEmployee(Long taskId);
+
+    @Modifying
+    @Transactional
+    @Query(value = "DELETE FROM project_tasks " +
+            "WHERE tasks_id = :taskId",
+            nativeQuery = true)
+    void deleteTaskMappingFromProject(Long taskId);
+
+    @Modifying
+    @Transactional
+    @Query(value = "DELETE FROM task " +
+            "WHERE id = :taskId",
+            nativeQuery = true)
+    void deleteTaskById(Long taskId);
 }

@@ -49,4 +49,9 @@ public class TaskController {
         taskService.updateTaskRating(taskId, ratingMap.get("rating"));
     }
 
+    @DeleteMapping("/api/v1/tasks/{task-id}")
+    public void deleteTask(@PathVariable("task-id") Long taskId, @RequestBody TaskDto taskDto) {
+        taskService.deleteTask(taskId, taskDto);
+    }
+
 }

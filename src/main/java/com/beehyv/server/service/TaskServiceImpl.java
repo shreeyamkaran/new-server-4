@@ -130,7 +130,18 @@ public class TaskServiceImpl implements TaskService {
             notificationService.sendTaskToManager(manager.getUsername(), taskDto);
             notificationService.sendTaskToManager("admin", taskDto);
             notificationService.sendNotificationToManager(manager.getUsername(), notificationDto);
-            notificationService.sendNotificationToManager("admin", notificationDto);
+            Employee admin = employeeRepository.findByUsername("admin").orElseThrow(() -> new UsernameNotFoundException("No admin found"));
+            Notification notification1 = new Notification();
+            notification1.setSender(employee);
+            notification1.setReceiver(admin);
+            notification1.setSubject(employee);
+            notification1.setReadStatus(false);
+            notification1.setTitle("Task added for appraisal");
+            notification1.setDescription(employee.getName() + " has added a task for appraisal");
+            notification1.setTask(createdTask);
+            notificationRepository.save(notification1);
+            NotificationDto notificationDto1 = getNotificationDto(notification1);
+            notificationService.sendNotificationToManager("admin", notificationDto1);
         }
         return taskDto;
     }
@@ -183,6 +194,22 @@ public class TaskServiceImpl implements TaskService {
         }
         employee.setRatings((employee.getRatings() * employee.getNumberOfRatings() - oldRating + rating) / employee.getNumberOfRatings());
         employeeRepository.save(employee);
+    }
+
+    @Override
+    public void deleteTask(Long taskId, TaskDto taskDto) {
+        taskRepository.deleteTaskMappingFromEmployee(taskId);
+        taskRepository.deleteTaskMappingFromProject(taskId);
+        List<Notification> notifications = notificationRepository.findAllByTaskId(taskId);
+        for(Notification notification: notifications) {
+            notificationService.removeTaskFromManager(notification.getReceiver().getUsername(), taskDto);
+            if(notification.getReadStatus() == false) {
+                NotificationDto notificationDto = getNotificationDto(notification);
+                notificationService.removeNotificationFromManager(notification.getReceiver().getUsername(), notificationDto);
+            }
+        }
+        notificationRepository.deleteNotificationByTaskId(taskId);
+        taskRepository.deleteTaskById(taskId);
     }
 
 }

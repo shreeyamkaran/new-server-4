@@ -17,4 +17,6 @@ public interface TaskService {
     void rateTask(Long taskId, Double rating);
 
     void updateTaskRating(Long taskId, Double rating);
+
+    void deleteTask(Long taskId, TaskDto taskDto);
 }
