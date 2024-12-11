@@ -31,4 +31,9 @@ public class NotificationController {
         notificationService.dismissNotification(notificationId);
     }
 
+    @PostMapping("/remind/{task-id}")
+    public void remindManager(@PathVariable("task-id") Long taskId) {
+        notificationService.remindManager(taskId);
+    }
+
 }

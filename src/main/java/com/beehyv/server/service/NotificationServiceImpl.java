@@ -2,7 +2,9 @@ package com.beehyv.server.service;
 
 import com.beehyv.server.dto.NotificationDto;
 import com.beehyv.server.dto.TaskDto;
+import com.beehyv.server.entity.Employee;
 import com.beehyv.server.entity.Notification;
+import com.beehyv.server.entity.Task;
 import com.beehyv.server.repository.EmployeeRepository;
 import com.beehyv.server.repository.NotificationRepository;
 import com.beehyv.server.repository.ProjectRepository;
@@ -10,6 +12,7 @@ import com.beehyv.server.repository.TaskRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -73,6 +76,27 @@ public class NotificationServiceImpl implements NotificationService {
         if(rowsAffected == 0) {
             throw new RuntimeException("Cannot dismiss notification");
         }
+    }
+
+    @Override
+    public void remindManager(Long taskId) {
+        Employee admin = employeeRepository.findByUsername("admin").orElseThrow(() -> new UsernameNotFoundException("No admin found"));
+        Long managerId = projectRepository.findManagerIdByTaskId(taskId);
+        Employee manager = employeeRepository.findById(managerId).orElseThrow(() -> new UsernameNotFoundException("No manager found"));
+        Long employeeId = taskRepository.findEmployeeIdByTaskId(taskId);
+        Employee employee = employeeRepository.findById(employeeId).orElseThrow(() -> new UsernameNotFoundException("No employee found"));
+        Task task = taskRepository.findById(taskId).orElseThrow(() -> new RuntimeException("No task found"));
+        Notification notification = new Notification();
+        notification.setSender(admin);
+        notification.setReceiver(manager);
+        notification.setSubject(employee);
+        notification.setReadStatus(false);
+        notification.setTitle("Task rating reminder");
+        notification.setDescription(employee.getName() + " has a task which has not been rated");
+        notification.setTask(task);
+        notificationRepository.save(notification);
+        NotificationDto notificationDto = getNotificationDto(notification);
+        sendNotificationToManager(manager.getUsername(), notificationDto);
     }
 
     private static NotificationDto getNotificationDto(Notification notification) {

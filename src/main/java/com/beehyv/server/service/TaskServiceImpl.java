@@ -47,6 +47,7 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public void updateTask(Long taskId, TaskDto task) {
         Task previousTask = taskRepository.findById(taskId).orElseThrow(() -> new RuntimeException("No task found"));
+        List<Notification> notifications = notificationRepository.findAllByTaskId(taskId);
         String oldStatus = previousTask.getAppraisalStatus();
         String newStatus = task.getAppraisalStatus();
         Long oldProjectId = projectRepository.findProjectIdByTaskId(taskId);
@@ -74,11 +75,44 @@ public class TaskServiceImpl implements TaskService {
             projectRepository.updateProjectByTaskId(newProjectId, taskId);
             notificationService.removeTaskFromManager(oldManager.getUsername(), task);
             notificationService.removeTaskFromManager("admin", task);
+            for(Notification notification: notifications) {
+                if(!notification.getReadStatus()) {
+                    NotificationDto notificationDto = getNotificationDto(notification);
+                    notificationService.removeNotificationFromManager(notification.getReceiver().getUsername(), notificationDto);
+                }
+            }
+            notificationRepository.deleteNotificationByTaskId(taskId);
             if(Objects.equals(newStatus, "APPLIED_FOR_APPRAISAL")) {
                 Long newManagerId = projectRepository.findManagerIdByTaskId(taskId);
                 Employee newManager = employeeRepository.findById(newManagerId).orElseThrow(() -> new UsernameNotFoundException("No manager found"));
                 notificationService.sendTaskToManager(newManager.getUsername(), task);
                 notificationService.sendTaskToManager("admin", task);
+                Long employeeId = taskRepository.findEmployeeIdByTaskId(taskId);
+                Employee employee = employeeRepository.findById(employeeId).orElseThrow(() -> new UsernameNotFoundException("No employee found"));
+                Notification notification = new Notification();
+                notification.setSender(employee);
+                notification.setReceiver(newManager);
+                notification.setSubject(employee);
+                notification.setReadStatus(false);
+                notification.setTitle("Task added for appraisal");
+                notification.setDescription(employee.getName() + " has added a task for appraisal");
+                Task newTask = taskRepository.findById(taskId).orElseThrow(() -> new RuntimeException("No task found"));
+                notification.setTask(newTask);
+                notificationRepository.save(notification);
+                NotificationDto notificationDto = getNotificationDto(notification);
+                notificationService.sendNotificationToManager(newManager.getUsername(), notificationDto);
+                Employee admin = employeeRepository.findByUsername("admin").orElseThrow(() -> new UsernameNotFoundException("No admin found"));
+                Notification notification1 = new Notification();
+                notification1.setSender(employee);
+                notification1.setReceiver(admin);
+                notification1.setSubject(employee);
+                notification1.setReadStatus(false);
+                notification1.setTitle("Task added for appraisal");
+                notification1.setDescription(employee.getName() + " has added a task for appraisal");
+                notification1.setTask(newTask);
+                notificationRepository.save(notification1);
+                NotificationDto notificationDto1 = getNotificationDto(notification1);
+                notificationService.sendNotificationToManager("admin", notificationDto1);
             }
             return;
         }
@@ -89,6 +123,13 @@ public class TaskServiceImpl implements TaskService {
             Employee manager = employeeRepository.findById(managerId).orElseThrow(() -> new UsernameNotFoundException("No manager found"));
             notificationService.removeTaskFromManager(manager.getUsername(), task);
             notificationService.removeTaskFromManager("admin", task);
+            for(Notification notification: notifications) {
+                if(!notification.getReadStatus()) {
+                    NotificationDto notificationDto = getNotificationDto(notification);
+                    notificationService.removeNotificationFromManager(notification.getReceiver().getUsername(), notificationDto);
+                }
+            }
+            notificationRepository.deleteNotificationByTaskId(taskId);
         }
         if(Objects.equals(oldStatus, "DID_NOT_APPLY") &&
                 Objects.equals(newStatus, "APPLIED_FOR_APPRAISAL")) {
@@ -96,6 +137,32 @@ public class TaskServiceImpl implements TaskService {
             Employee manager = employeeRepository.findById(managerId).orElseThrow(() -> new UsernameNotFoundException("No manager found"));
             notificationService.sendTaskToManager(manager.getUsername(), task);
             notificationService.sendTaskToManager("admin", task);
+            Long employeeId = taskRepository.findEmployeeIdByTaskId(taskId);
+            Employee employee = employeeRepository.findById(employeeId).orElseThrow(() -> new UsernameNotFoundException("No employee found"));
+            Notification notification = new Notification();
+            notification.setSender(employee);
+            notification.setReceiver(manager);
+            notification.setSubject(employee);
+            notification.setReadStatus(false);
+            notification.setTitle("Task added for appraisal");
+            notification.setDescription(employee.getName() + " has added a task for appraisal");
+            Task newTask = taskRepository.findById(taskId).orElseThrow(() -> new RuntimeException("No task found"));
+            notification.setTask(newTask);
+            notificationRepository.save(notification);
+            NotificationDto notificationDto = getNotificationDto(notification);
+            notificationService.sendNotificationToManager(manager.getUsername(), notificationDto);
+            Employee admin = employeeRepository.findByUsername("admin").orElseThrow(() -> new UsernameNotFoundException("No admin found"));
+            Notification notification1 = new Notification();
+            notification1.setSender(employee);
+            notification1.setReceiver(admin);
+            notification1.setSubject(employee);
+            notification1.setReadStatus(false);
+            notification1.setTitle("Task added for appraisal");
+            notification1.setDescription(employee.getName() + " has added a task for appraisal");
+            notification1.setTask(newTask);
+            notificationRepository.save(notification1);
+            NotificationDto notificationDto1 = getNotificationDto(notification1);
+            notificationService.sendNotificationToManager("admin", notificationDto1);
         }
     }
 
@@ -198,12 +265,15 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public void deleteTask(Long taskId, TaskDto taskDto) {
+        Long managerId = projectRepository.findManagerIdByTaskId(taskId);
+        Employee manager = employeeRepository.findById(managerId).orElseThrow(() -> new UsernameNotFoundException("No manager found"));
+        notificationService.removeTaskFromManager(manager.getUsername(), taskDto);
+        notificationService.removeTaskFromManager("admin", taskDto);
         taskRepository.deleteTaskMappingFromEmployee(taskId);
         taskRepository.deleteTaskMappingFromProject(taskId);
         List<Notification> notifications = notificationRepository.findAllByTaskId(taskId);
         for(Notification notification: notifications) {
-            notificationService.removeTaskFromManager(notification.getReceiver().getUsername(), taskDto);
-            if(notification.getReadStatus() == false) {
+            if(!notification.getReadStatus()) {
                 NotificationDto notificationDto = getNotificationDto(notification);
                 notificationService.removeNotificationFromManager(notification.getReceiver().getUsername(), notificationDto);
             }

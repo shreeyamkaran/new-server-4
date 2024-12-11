@@ -13,4 +13,6 @@ public interface NotificationService {
     List<NotificationDto> fetchAllNotifications(Long receiverId);
 
     void dismissNotification(Long notificationId);
+
+    void remindManager(Long taskId);
 }
